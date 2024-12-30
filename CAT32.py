@@ -12,7 +12,7 @@ import hw.font
 import hw.button
 
 RUNMODE = 0
-ROOT = os.path.dirname(sys.argv[0])
+ROOT = os.path.dirname(os.path.abspath(__file__))
 FPS = 30
 
 process = type('', (), {})() # Empty object
@@ -108,24 +108,18 @@ def main():
   # dont clog cpu resources
   time.sleep(1/1000)
  return 0
-
+ 
 if __name__ == "__main__":
  sys.exit(main())
- 
+
 # async def asyncio_process_update():
 #  while True:
-#   if hasattr(process, "draw"):
-#    process.draw()
-#    flip()
-#    await asyncio.sleep(0)  # Yield
+#   process_update()
+#   await asyncio.sleep(0)  # Yield
 # 
 # async def asyncio_fps_update():
 #  while True:
-#   BUTTON._update_state()
-# 
-#   if hasattr(process, "update"):
-#    process.update()
-#   
+#   per_fps_update()
 #   await asyncio.sleep(1 / FPS)  # Yield
 # 
 # async def asyncio_collection():
