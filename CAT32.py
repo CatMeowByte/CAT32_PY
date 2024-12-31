@@ -2,39 +2,52 @@ import builtins
 import os
 import random
 import sys
-import threading
-# import asyncio
+import asyncio
 import time
 
 import hw.video
 import hw.color
 import hw.font
 import hw.button
+import hw.storage
 
-RUNMODE = 0
+
 ROOT = os.path.dirname(os.path.abspath(__file__))
-FPS = 30
+TICK = 30
+DEFAULT_MENU = "/app/file_explorer.cat.py"
 
-process = type('', (), {})() # Empty object
+process = None
+
+def process_error(e, phase):
+ global process
+ error_type = type(e).__name__
+ error_message = str(e)
+ tb = e.__traceback__
+ while tb.tb_next:
+  tb = tb.tb_next
+ line_number = tb.tb_lineno
+ 
+ print(phase + " ERROR @ " + str(line_number) + ": " + error_type)
+ print(error_message)
+ process = None
 
 def run(script):
  global process
- if RUNMODE:
-  directory, file = os.path.split(script)
-  module = os.path.splitext(file)[0]
-  
-  # Temporarily modify sys.path
-  original_sys_path = sys.path
-  sys.path = original_sys_path + [ROOT + directory]  # Append the directory
-  
-  process = __import__(module)
-  
-  # Restore the original sys.path
-  sys.path = original_sys_path
- else:
-  with open(ROOT + script, "r") as f: # Why os.path.join doesnt work?
-   code = f.read()
+ process = type("", (), {})()  # Empty object
+ path = ROOT.rstrip('/') + '/' + script.lstrip('/')
+ code = None
+ with open(path, "r") as f:
+  code = f.read()
+ try:
   exec(code, process.__dict__)
+ except Exception as e:
+  process_error(e, "LOAD")
+
+ if hasattr(process, "init"):
+  try:
+   process.init()
+  except Exception as e:
+   process_error(e, "INIT")
 
 def timer(duration):
  time.sleep(duration)
@@ -42,16 +55,17 @@ def timer(duration):
 def rnd(value=1.0):
  return random.random() * value
 
-# Illegal programming technique : builtins injection
+# Illegal programming technique: builtins injection
+# HW
 builtins.VIDEO = hw.video
 builtins.COLOR = hw.color
 builtins.FONT = hw.font
 builtins.BUTTON = hw.button
-
+builtins.STORAGE = hw.storage
+# VIDEO
 VIDEO.COLOR = COLOR
 VIDEO.FONT = FONT
 VIDEO.init()
-
 builtins.cam = VIDEO.camera
 builtins.mem = VIDEO.memsel
 builtins.pix = VIDEO.pixel
@@ -61,68 +75,54 @@ builtins.text = VIDEO.text
 builtins.blit = VIDEO.blit
 builtins.cls = VIDEO.clear
 builtins.flip = VIDEO.flip
-
+# COLOR
 builtins.mask = COLOR.transparent
-
+# BUTTON
 builtins.btn = BUTTON.is_pressed
 builtins.btnr = BUTTON.get_repeat
-
+# STORAGE
+builtins.lsd = STORAGE.lsd
+# CAT32
+builtins.ROOT = ROOT
 builtins.run = run
 builtins.timer = timer
 builtins.rnd = rnd
-
 builtins.o = print
 
+run("/app/file_explorer.cat.py")
 # run("/app/planet_name.cat.py")
-run("/app/snake.cat.py")
+# run("/app/snake.cat.py")
 # run("/test.cat.py")
 
 # Loop
-if hasattr(process, "init"):
- process.init()
-
-def per_fps_update():
+def per_tick_update():
  BUTTON._update_state()
 
  if hasattr(process, "update"):
-  process.update()
+  try:
+   process.update()
+  except Exception as e:
+   process_error(e, "UPDATE")
 
-def process_update():
+def per_flip_update():
  if hasattr(process, "draw"):
-  process.draw()
+  try:
+   process.draw()
+  except Exception as e:
+   process_error(e, "DRAW")
   flip()
 
-def main():
- time_last_fps  = time.time()
- time_last_flip = time.time()
+async def asyncio_tick_update():
  while True:
-  time_now = time.time()
-  # variable fps refresh
-  if time_now - time_last_fps  >= 1/FPS:
-   time_last_fps += 1/FPS
-   per_fps_update()
-  # default 60hz refresh
-  if time_now - time_last_flip >= 1/60:
-   time_last_flip += 1/60
-   process_update()
-  # dont clog cpu resources
-  time.sleep(1/1000)
- return 0
- 
-if __name__ == "__main__":
- sys.exit(main())
+  per_tick_update()
+  await asyncio.sleep(1 / TICK)
 
-# async def asyncio_process_update():
-#  while True:
-#   process_update()
-#   await asyncio.sleep(0)  # Yield
-# 
-# async def asyncio_fps_update():
-#  while True:
-#   per_fps_update()
-#   await asyncio.sleep(1 / FPS)  # Yield
-# 
-# async def asyncio_collection():
-#  await asyncio.gather(asyncio_process_update(), asyncio_fps_update())
-# 
-# asyncio.run(asyncio_collection())
+async def asyncio_flip_update():
+ while True:
+  per_flip_update()
+  await asyncio.sleep(0)
+
+async def asyncio_collection():
+ await asyncio.gather(asyncio_tick_update(), asyncio_flip_update())
+
+asyncio.run(asyncio_collection())
