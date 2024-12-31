@@ -12,7 +12,7 @@ import hw.font
 import hw.button
 
 RUNMODE = 0
-ROOT = "/home/catmeowbyte/CAT32_PY"
+ROOT = os.path.dirname(os.path.abspath(__file__))
 FPS = 30
 
 process = type('', (), {})() # Empty object
@@ -87,28 +87,39 @@ def per_fps_update():
  if hasattr(process, "update"):
   process.update()
 
- threading.Timer(1 / FPS, per_fps_update).start()
-per_fps_update()
-
-while True:
+def process_update():
  if hasattr(process, "draw"):
   process.draw()
   flip()
 
+def main():
+ time_last_fps  = time.time()
+ time_last_flip = time.time()
+ while True:
+  time_now = time.time()
+  # variable fps refresh
+  if time_now - time_last_fps  >= 1/FPS:
+   time_last_fps += 1/FPS
+   per_fps_update()
+  # default 60hz refresh
+  if time_now - time_last_flip >= 1/60:
+   time_last_flip += 1/60
+   process_update()
+  # dont clog cpu resources
+  time.sleep(1/1000)
+ return 0
+ 
+if __name__ == "__main__":
+ sys.exit(main())
+
 # async def asyncio_process_update():
 #  while True:
-#   if hasattr(process, "draw"):
-#    process.draw()
-#    flip()
-#    await asyncio.sleep(0)  # Yield
+#   process_update()
+#   await asyncio.sleep(0)  # Yield
 # 
 # async def asyncio_fps_update():
 #  while True:
-#   BUTTON._update_state()
-# 
-#   if hasattr(process, "update"):
-#    process.update()
-#   
+#   per_fps_update()
 #   await asyncio.sleep(1 / FPS)  # Yield
 # 
 # async def asyncio_collection():
