@@ -14,9 +14,10 @@ import hw.storage
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 TICK = 30
-DEFAULT_MENU = "/app/file_explorer.cat.py"
+DEFAULT_MENU = "/app/file_explorer.app"
 
 process = None
+service = None
 
 def process_error(e, phase):
  global process
@@ -89,10 +90,10 @@ builtins.timer = timer
 builtins.rnd = rnd
 builtins.o = print
 
-run("/app/file_explorer.cat.py")
-# run("/app/planet_name.cat.py")
-# run("/app/snake.cat.py")
-# run("/test.cat.py")
+run("/app/file_explorer.app")
+# run("/app/planet_name.app")
+# run("/app/snake.app")
+# run("/test.app")
 
 # Loop
 def per_tick_update():
