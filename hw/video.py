@@ -1,5 +1,7 @@
 import sdl2
 
+# TODO: convert to async
+
 SCALE = 3
 W = 120
 HVIEW = 120

@@ -1,15 +1,15 @@
+import asyncio
 import builtins
 import os
 import random
 import sys
-import asyncio
 import time
 
-import hw.video
+import hw.button
 import hw.color
 import hw.font
-import hw.button
 import hw.storage
+import hw.video
 
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -18,6 +18,7 @@ DEFAULT_MENU = "/app/file_explorer.app"
 
 process = None
 service = None
+services = [f for f in os.listdir(ROOT + "/svc") if f.endswith(".svc")]
 
 def process_error(e, phase):
  global process
@@ -35,7 +36,7 @@ def process_error(e, phase):
 def run(script):
  global process
  process = type("", (), {})()  # Empty object
- path = ROOT.rstrip('/') + '/' + script.lstrip('/')
+ path = ROOT + "/" + script.lstrip("/")
  code = None
  with open(path, "r") as f:
   code = f.read()
@@ -113,6 +114,38 @@ def per_flip_update():
    process_error(e, "DRAW")
   flip()
 
+def per_service_update():
+ global service, services
+ service = type("", (), {})()  # Empty object
+ i = 0
+ while i < len(services):
+  file = services[i]
+  try:
+   path = ROOT + "/svc/" + file
+   code = None
+   with open(path, "r") as f:
+    code = f.read()
+   exec(code, service.__dict__)
+   
+   if hasattr(service, "serve"):
+    service.serve()
+   
+   i += 1
+  except Exception as e:
+   error_type = type(e).__name__
+   error_message = str(e)
+   tb = e.__traceback__
+   while tb and tb.tb_next:
+    tb = tb.tb_next
+   line_number = tb.tb_lineno
+   
+   print("SERVICE ERROR @ " + str(line_number) + ": " + error_type)
+   print(error_message)
+   print("service \"" + file + "\" disabled")
+   
+   services.pop(i)
+   # Do not increment `i` because the list has shifted
+
 async def asyncio_tick_update():
  while True:
   per_tick_update()
@@ -123,7 +156,16 @@ async def asyncio_flip_update():
   per_flip_update()
   await asyncio.sleep(0)
 
+async def asyncio_service_update():
+ while services:
+  per_service_update()
+  await asyncio.sleep(0)
+
 async def asyncio_collection():
- await asyncio.gather(asyncio_tick_update(), asyncio_flip_update())
+ await asyncio.gather(
+  asyncio_tick_update(),
+  asyncio_flip_update(),
+  asyncio_service_update()
+ )
 
 asyncio.run(asyncio_collection())
