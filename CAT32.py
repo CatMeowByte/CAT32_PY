@@ -10,7 +10,6 @@ builtins.PLATFORM = type("", (), {})()
 PLATFORM.IS_CONSOLE = sys.implementation.name == "micropython"
 PLATFORM.IS_DESKTOP = sys.implementation.name == "cpython"
 
-
 ROOT = "/" if PLATFORM.IS_CONSOLE else os.path.dirname(os.path.abspath(__file__))
 TICK = 30
 LAUNCHER = "/app/file_explorer.app"
@@ -18,69 +17,15 @@ LAUNCHER = "/app/file_explorer.app"
 process = None
 services = []
 
+# Injected into builtins
+banks = [
+ "__sprite__",
+]
+
 # Decorator
 def oneshot(func):
  func()
  return None
-
-# Utilities
-def run(script):
- global process
- process = type("", (), {})()  # Empty object
- path = link(ROOT, script)
-
- if PLATFORM.IS_CONSOLE:
-  process.__filename__ = path.rsplit("/", 1)[-1]
- else:
-  process.__filename__ = os.path.basename(path)
-
- code = None
- with open(path, "r") as f:
-  code = f.read()
- try:
-  exec(code, process.__dict__)
- except Exception as e:
-  _exception_error(e, "PROCESS \"" + process.__filename__ + "\"", "LOAD")
-  process = None
-
- if hasattr(process, "init"):
-  try:
-   process.init()
-  except Exception as e:
-   _exception_error(e, "PROCESS \"" + process.__filename__ + "\"", "INIT")
-   process = None
-
-def quit():
- run(LAUNCHER)
-
-def timer(duration):
- time.sleep(duration)
-
-def rnd(value=1.0):
- return random.random() * value
-
-def link(*i):
- if not i:
-  return ""
-
- if PLATFORM.IS_DESKTOP:
-  return os.path.join(*i)
-
- base = i[0]
- ex = [p.strip("/") for p in i[1:] if p]
- return base.rstrip("/") + "/" + "/".join(ex) if ex else base
-
-# Internal
-def _exception_error(e, exec_type, phase):
- error_type = type(e).__name__
- error_message = str(e)
- tb = e.__traceback__
- while tb.tb_next:
-  tb = tb.tb_next
- line_number = tb.tb_lineno
-
- print(exec_type + " " + phase + " ERROR @ " + str(line_number) + ": " + error_type)
- print(error_message)
 
 # Builtins injection
 # HW
@@ -112,7 +57,51 @@ builtins.mask = COLOR.transparent
 builtins.btn = BUTTON.is_pressed
 builtins.btnr = BUTTON.get_repeat
 # STORAGE
+builtins.link = STORAGE.link
 builtins.lsd = STORAGE.lsd
+
+# Utilities
+def run(script):
+ global process
+ process = type("", (), {})()  # Empty object
+ path = link(ROOT, script)
+
+ process.__filename__ = path.rsplit("/" if PLATFORM.IS_CONSOLE else os.path.sep, 1)[-1]
+
+ def __point_self__():
+  return process.__dict__
+ process.__point_self__ = __point_self__
+
+ lines = None
+ with open(path, "r") as f: lines = f.readlines()
+
+ for line in lines:
+  for bank in banks:
+   if line.startswith(bank):
+    exec(line, builtins.__dict__)
+
+ try:
+  exec("".join(lines), process.__dict__)
+ except Exception as e:
+  _exception_error(e, "PROCESS \"" + process.__filename__ + "\"", "LOAD")
+  process = None
+
+ if hasattr(process, "init"):
+  try:
+   process.init()
+  except Exception as e:
+   _exception_error(e, "PROCESS \"" + process.__filename__ + "\"", "INIT")
+   process = None
+
+def quit():
+ run(LAUNCHER)
+
+def timer(duration):
+ time.sleep(duration)
+
+def rnd(value=1.0):
+ return random.random() * value
+
 # CAT32
 builtins.ROOT = ROOT
 builtins.oneshot = oneshot
@@ -120,9 +109,20 @@ builtins.run = run
 builtins.quit = quit
 builtins.timer = timer
 builtins.rnd = rnd
-builtins.link = link
 builtins.o = print # TODO: better debug print
 
+# Internal
+def _exception_error(e, exec_type, phase):
+ error_type = type(e).__name__
+ error_message = str(e)
+ tb = e.__traceback__
+ while tb.tb_next:
+  tb = tb.tb_next
+ line_number = tb.tb_lineno
+
+ print(exec_type + " " + phase + " ERROR")
+ print(str(line_number) + ": " + error_type)
+ print(error_message)
 
 @oneshot
 def load_services():
@@ -132,13 +132,20 @@ def load_services():
    continue
 
   service = type("", (), {})()  # Empty object
-  service.__filename__ = file
   path = link(ROOT, "svc", file)
-  code = None
-  with open(path, "r") as f:
-   code = f.read()
+
+  service.__filename__ = file
+
+  lines = None
+  with open(path, "r") as f: lines = f.readlines()
+
+  for line in lines:
+   for bank in banks:
+    if line.startswith(bank):
+     exec(line, builtins.__dict__)
+
   try:
-   exec(code, service.__dict__)
+   exec("".join(lines), service.__dict__)
   except Exception as e:
    _exception_error(e, "SERVICE \"" + service.__filename__ + "\"", "LOAD")
    print("service \"" + service.__filename__ + "\" skipped")
@@ -157,6 +164,9 @@ def per_tick_update():
  BUTTON._update_state()
 
  if hasattr(process, "update"):
+  for bank in banks:
+   if hasattr(process, bank):
+    builtins.__dict__[bank] = process.__dict__[bank]
   try:
    process.update()
   except Exception as e:
@@ -166,6 +176,9 @@ def per_tick_update():
 def per_flip_update():
  global process
  if hasattr(process, "draw"):
+  for bank in banks:
+   if hasattr(process, bank):
+    builtins.__dict__[bank] = process.__dict__[bank]
   try:
    process.draw()
   except Exception as e:
@@ -180,11 +193,14 @@ def per_service_update():
   service = services[i]
   try:
    if hasattr(service, "serve"):
+    for bank in banks:
+     if hasattr(service, bank):
+      builtins.__dict__[bank] = service.__dict__[bank]
     service.serve()
 
    i += 1
   except Exception as e:
-   _exception_error(e, "SERVICE \"" + process.__filename__ + "\"", "SERVE")
+   _exception_error(e, "SERVICE \"" + service.__filename__ + "\"", "SERVE")
    print("service \"" + service.__filename__ + "\" disabled")
 
    services.pop(i)
@@ -209,7 +225,7 @@ async def asyncio_collection():
  await asyncio.gather(
   asyncio_tick_update(),
   asyncio_flip_update(),
-  asyncio_service_update()
+  asyncio_service_update(),
  )
 
 asyncio.run(asyncio_collection())

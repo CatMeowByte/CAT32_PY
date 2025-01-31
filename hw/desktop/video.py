@@ -1,3 +1,4 @@
+import math
 import sdl2
 
 # TODO: convert to async
@@ -80,7 +81,7 @@ def camera(x=0, y=0):
 def _pixel_get(x, y):
  x = int(x)
  y = int(y)
- 
+
  if x < 0 or x >= W or y < 0 or y >= H:
   return -1
  index = (y * W + x) // 2
@@ -90,7 +91,7 @@ def _pixel_set(x, y, color):
  x = int(x)
  y = int(y)
  color = int(color)
- 
+
  if x < 0 or x >= W or y < 0 or y >= H:
   return
  if (COLOR.mask & (1 << color)) != 0:
@@ -148,7 +149,7 @@ def rect(x, y, width, height, color, fill=False):
  height = int(height)
  color = int(color)
  fill = bool(fill)
- 
+
  x -= cam[0]
  y -= cam[1]
  if x >= W or y >= H or x + width <= 0 or y + height <= 0:
@@ -212,7 +213,7 @@ def character(x, y, ordinal, color, background=0):
     continue
    _pixel_set(tx, ty, color if on else background)
 
-def blit(
+def blit_source_to_dest(
  src,
  src_size_w, src_size_h,
  src_x, src_y, src_w, src_h,
@@ -264,6 +265,22 @@ def blit(
    color = (src[i] >> 4) if sx % 2 == 0 else (src[i] & 0x0F)
 
    _pixel_set(dest_x + x, dest_y + y, color)
+
+def blit(
+ src_x, src_y, src_w, src_h,
+ dest_size_w, dest_size_h,
+ dest_x, dest_y, dest_w, dest_h,
+ rotation=0
+):
+ size = int(math.sqrt(len(__sprite__) / 2))
+ blit_source_to_dest(
+  __sprite__,
+  size, size,
+  src_x, src_y, src_w, src_h,
+  dest_size_w, dest_size_h,
+  dest_x, dest_y, dest_w, dest_h,
+  rotation=0
+ )
 
 def clear(color=0):
  mem[:] = [((color & 0x0F) << 4) | (color & 0x0F)] * len(mem)

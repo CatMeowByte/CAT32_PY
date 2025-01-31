@@ -9,16 +9,13 @@ def init():
 
 def load_directory():
  global ls_dir, ls_file, entries, select
- ls = STORAGE.lsd(ROOT + path)
+ ls = lsd(link(ROOT, path))
  ls_dir = ls[0]
  ls_file = ls[1]
  ls_dir.sort()
  ls_file.sort()
  entries = ls_dir + ls_file
  select = 0
-
-def path_join(base, part):
- return base.rstrip("/") + "/" + part
 
 def path_back(path):
  path = path.rstrip("/")
@@ -38,11 +35,11 @@ def update():
   # play sound here
   selected_entry = entries[select]
   if selected_entry in ls_dir:
-   path = path_join(path, selected_entry)
+   path = link(path, selected_entry)
    load_directory()
   elif selected_entry in ls_file:
    # play sound here
-   run(path_join(path, selected_entry))
+   run(link(path, selected_entry))
  elif btnr(BUTTON.CANCEL):
   # play sound here
   split = path.strip("/").split("/")

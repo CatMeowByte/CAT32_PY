@@ -1,6 +1,6 @@
 # TODO: implement presistent storage
 
-o("global")
-def serve():
- o("menu")
-o("lorem ipsum")
+# o("global")
+# def serve():
+ # o("menu")
+# o("lorem ipsum")
