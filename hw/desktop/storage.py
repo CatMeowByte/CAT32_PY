@@ -28,4 +28,4 @@ def lsd(path):
  except OSError:
   pass
 
- return [dirs, files]
+ return (dirs, files)

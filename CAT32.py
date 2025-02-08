@@ -132,18 +132,21 @@ def run(script, pid=0):
   _exception_error(e, process[pid]._pid_, "LOAD")
 
  for field in PROCESS_FIELDS:
-  process_upref[field][pid] = getattr(process[pid], field, None)
+  attr = "update" if field == "tick" else field # Exception
+  process_upref[field][pid] = getattr(process[pid], attr, None)
 
  # Init
  try:
-  process.init()
- except AttributeError:
-  pass
+  process[pid].init()
+ except AttributeError: pass
  except Exception as e:
   _exception_error(e, process[pid]._pid_, "INIT")
 
 def quit():
  run(LAUNCHER)
+
+def kill(pid):
+ pass # TODO: blank process and all upref
 
 # Generic
 def timer(duration):

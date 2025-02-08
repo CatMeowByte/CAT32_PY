@@ -9,9 +9,7 @@ def init():
 
 def load_directory():
  global ls_dir, ls_file, entries, select
- ls = lsd(link(ROOT, path))
- ls_dir = ls[0]
- ls_file = ls[1]
+ ls_dir, ls_file = lsd(link(ROOT, path))
  ls_dir.sort()
  ls_file.sort()
  entries = ls_dir + ls_file
