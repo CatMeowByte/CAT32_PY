@@ -1,7 +1,4 @@
-import math
 import sdl2
-
-# TODO: convert to async
 
 SCALE = 3
 W = 120
@@ -78,7 +75,7 @@ def camera(x=0, y=0):
  cam = [x, y]
  return prev
 
-def _pixel_get(x, y):
+def pixel_get(x, y):
  x = int(x)
  y = int(y)
 
@@ -87,7 +84,7 @@ def _pixel_get(x, y):
  index = (y * W + x) // 2
  return (mem[index] >> 4) if x % 2 == 0 else (mem[index] & 0x0F)
 
-def _pixel_set(x, y, color):
+def pixel_set(x, y, color):
  x = int(x)
  y = int(y)
  color = int(color)
@@ -109,10 +106,10 @@ def pixel(x, y, color=-1):
  if x < 0 or x >= W or y < 0 or y >= H:
   return -1
 
- old_color = _pixel_get(x, y)
+ old_color = pixel_get(x, y)
 
  if color != -1:
-  _pixel_set(x, y, color)
+  pixel_set(x, y, color)
 
  return old_color
 
@@ -129,7 +126,7 @@ def line(x1, y1, x2, y2, color):
  err = dx - dy
 
  while True:
-  _pixel_set(x1, y1, color)
+  pixel_set(x1, y1, color)
 
   if x1 == x2 and y1 == y2:
    break
@@ -163,15 +160,15 @@ def rect(x, y, width, height, color, fill=False):
  if fill:
   for scan_y in range(y_start, y_end):
    for scan_x in range(x_start, x_end):
-    _pixel_set(scan_x, scan_y, color)
+    pixel_set(scan_x, scan_y, color)
  else:
   for scan_x in range(x_start, x_end):
-   _pixel_set(scan_x, y_start, color) # Top
-   _pixel_set(scan_x, y_end - 1, color) # Bottom
+   pixel_set(scan_x, y_start, color) # Top
+   pixel_set(scan_x, y_end - 1, color) # Bottom
 
   for scan_y in range(y_start + 1, y_end - 1):
-   _pixel_set(x_start, scan_y, color) # Left
-   _pixel_set(x_end - 1, scan_y, color) # Right
+   pixel_set(x_start, scan_y, color) # Left
+   pixel_set(x_end - 1, scan_y, color) # Right
 
 def text(x, y, string, color, background=0):
  x -= cam[0]
@@ -211,7 +208,7 @@ def character(x, y, ordinal, color, background=0):
    ty = y + py
    if tx < 0 or tx >= W or ty < 0 or ty >= H:
     continue
-   _pixel_set(tx, ty, color if on else background)
+   pixel_set(tx, ty, color if on else background)
 
 def blit_source_to_dest(
  src,
@@ -264,20 +261,19 @@ def blit_source_to_dest(
 
    color = (src[i] >> 4) if sx % 2 == 0 else (src[i] & 0x0F)
 
-   _pixel_set(dest_x + x, dest_y + y, color)
+   pixel_set(dest_x + x, dest_y + y, color)
 
 def blit(
  src_x, src_y, src_w, src_h,
- dest_size_w, dest_size_h,
  dest_x, dest_y, dest_w, dest_h,
  rotation=0
 ):
- size = int(math.sqrt(len(__sprite__) / 2))
+ size = 128 if process._pid_ == 0 else 64
  blit_source_to_dest(
-  __sprite__,
+  process._sprite_,
   size, size,
   src_x, src_y, src_w, src_h,
-  dest_size_w, dest_size_h,
+  120, 160,
   dest_x, dest_y, dest_w, dest_h,
   rotation=0
  )

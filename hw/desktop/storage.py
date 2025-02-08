@@ -9,10 +9,7 @@ def link(*point):
 
  for p in ex:
   if p:
-   if PLATFORM.IS_DESKTOP:
-    path = os.path.join(path, p.strip(os.sep))
-   else:
-    path += "/" + p.strip("/")
+   path = os.path.join(path, p.strip(os.sep))
 
  return path
 

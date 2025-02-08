@@ -5,39 +5,52 @@ import random
 import sys
 import time
 
-# Device specific implementation
-builtins.PLATFORM = type("", (), {})()
-PLATFORM.IS_CONSOLE = sys.implementation.name == "micropython"
-PLATFORM.IS_DESKTOP = sys.implementation.name == "cpython"
+# Libraries
+from lib.boxdict import Box
+builtins.Box = Box
 
-ROOT = "/" if PLATFORM.IS_CONSOLE else os.path.dirname(os.path.abspath(__file__))
-TICK = 30
+from lib.utilities import clamp, oneshot
+builtins.oneshot = oneshot
+builtins.clamp = clamp
+
+# TODO:
+# process is a pool
+# maximum is 8 process
+# use asyncio to run task in parallel
+# process 0 is application
+# others are service
+# 1.menu, 2.input, 3.clock 4.network
+# when error it gets removed, not popped
+
+# Constants
+builtins.TICK = 30
+MAX_PROCESS = 4
+BANKS = [
+ "_sprite_",
+ "_layout_",
+ "_tracks_",
+]
 LAUNCHER = "/app/file_explorer.app"
 
-process = None
-services = []
+# Platform specific
+builtins.MICROPYTHON = sys.implementation.name == "micropython"
+builtins.ROOT = "/" if MICROPYTHON else os.path.dirname(os.path.abspath(__file__))
 
-# Injected into builtins
-banks = [
- "__sprite__",
-]
-
-# Decorator
-def oneshot(func):
- func()
- return None
-
-# Builtins injection
 # HW
 # Platform specific imports
 @oneshot
 def platform_specific_module():
- hw_prefix = "hw.console." if PLATFORM.IS_CONSOLE else "hw.desktop."
- builtins.VIDEO = __import__(hw_prefix + "video", fromlist=["*"])
- builtins.COLOR = __import__(hw_prefix + "color", fromlist=["*"])
- builtins.FONT = __import__(hw_prefix + "font", fromlist=["*"])
- builtins.BUTTON = __import__(hw_prefix + "button", fromlist=["*"])
- builtins.STORAGE = __import__(hw_prefix + "storage", fromlist=["*"])
+ module_map = {
+  "VIDEO": "video",
+  "COLOR": "color",
+  "FONT": "font",
+  "BUTTON": "button",
+  "STORAGE": "storage",
+ }
+ dir_prefix = "console" if MICROPYTHON else "desktop"
+ for builtin_name, module_suffix in module_map.items():
+  module = __import__(f"hw.{dir_prefix}.{module_suffix}", fromlist=["*"])
+  setattr(builtins, builtin_name, module)
 # VIDEO
 VIDEO.COLOR = COLOR
 VIDEO.FONT = FONT
@@ -50,7 +63,6 @@ builtins.rect = VIDEO.rect
 builtins.text = VIDEO.text
 builtins.blit = VIDEO.blit
 builtins.cls = VIDEO.clear
-builtins.flip = VIDEO.flip
 # COLOR
 builtins.mask = COLOR.transparent
 # BUTTON
@@ -60,59 +72,8 @@ builtins.btnr = BUTTON.get_repeat
 builtins.link = STORAGE.link
 builtins.lsd = STORAGE.lsd
 
-# Utilities
-def run(script):
- global process
- process = type("", (), {})()  # Empty object
- path = link(ROOT, script)
-
- process.__filename__ = path.rsplit("/" if PLATFORM.IS_CONSOLE else os.path.sep, 1)[-1]
-
- def __point_self__():
-  return process.__dict__
- process.__point_self__ = __point_self__
-
- lines = None
- with open(path, "r") as f: lines = f.readlines()
-
- for line in lines:
-  for bank in banks:
-   if line.startswith(bank):
-    exec(line, builtins.__dict__)
-
- try:
-  exec("".join(lines), process.__dict__)
- except Exception as e:
-  _exception_error(e, "PROCESS \"" + process.__filename__ + "\"", "LOAD")
-  process = None
-
- if hasattr(process, "init"):
-  try:
-   process.init()
-  except Exception as e:
-   _exception_error(e, "PROCESS \"" + process.__filename__ + "\"", "INIT")
-   process = None
-
-def quit():
- run(LAUNCHER)
-
-def timer(duration):
- time.sleep(duration)
-
-def rnd(value=1.0):
- return random.random() * value
-
-# CAT32
-builtins.ROOT = ROOT
-builtins.oneshot = oneshot
-builtins.run = run
-builtins.quit = quit
-builtins.timer = timer
-builtins.rnd = rnd
-builtins.o = print # TODO: better debug print
-
 # Internal
-def _exception_error(e, exec_type, phase):
+def _exception_error(e, pid, at):
  error_type = type(e).__name__
  error_message = str(e)
  tb = e.__traceback__
@@ -120,38 +81,94 @@ def _exception_error(e, exec_type, phase):
   tb = tb.tb_next
  line_number = tb.tb_lineno
 
- print(exec_type + " " + phase + " ERROR")
- print(str(line_number) + ": " + error_type)
+ print(f"{at} ERROR")
+ print(process[pid]._filepath_)
+ print(f"{line_number}: {error_type}")
  print(error_message)
+
+# Process
+PROCESS_FIELDS = Box(
+ tick=Box(label="UPDATE", interval=1/TICK),
+ draw=Box(label="DRAW", interval=1/TICK),
+ # Periodic
+ period_q=Box(label="PERIOD QUARTER SECOND", interval=1/4),
+ period_h=Box(label="PERIOD HALF SECOND", interval=1/2),
+ # Generated
+ **{
+     f"period_{secs}": Box(
+         label=f"PERIOD {secs} SECOND",
+         interval=secs
+     )
+     for secs in (1, 2, 4, 8, 16, 32)
+ }
+)
+
+process_upref = Box({
+ field: [None] * MAX_PROCESS
+ for field in PROCESS_FIELDS
+})
+
+process = [None] * MAX_PROCESS
+
+def run(script, pid=0):
+ pid = clamp(pid, 0, MAX_PROCESS - 1)
+ process[pid] = type("", (), {})()  # Empty object
+ path = link(ROOT, script)
+
+ process[pid]._filepath_ = path.rsplit("/" if MICROPYTHON else os.path.sep, 1)[-1]
+ process[pid]._pid_ = pid
+
+ lines = None
+ with open(path, "r") as f: lines = f.readlines()
+
+ for line in lines:
+  for bank in BANKS:
+   if line.startswith(bank):
+    exec(line, process[pid].__dict__)
+
+ try:
+  exec("".join(lines), process[pid].__dict__)
+ except Exception as e:
+  _exception_error(e, process[pid]._pid_, "LOAD")
+
+ for field in PROCESS_FIELDS:
+  process_upref[field][pid] = getattr(process[pid], field, None)
+
+ # Init
+ try:
+  process.init()
+ except AttributeError:
+  pass
+ except Exception as e:
+  _exception_error(e, process[pid]._pid_, "INIT")
+
+def quit():
+ run(LAUNCHER)
+
+# Generic
+def timer(duration):
+ time.sleep(duration)
+
+def rnd(value=1.0):
+ return random.random() * value
+
+# Process
+builtins.run = run
+builtins.quit = quit
+# Generic
+builtins.timer = timer
+builtins.rnd = rnd
 
 @oneshot
 def load_services():
- global services
+ services = []
  for file in os.listdir(link(ROOT, "svc")):
-  if not file.endswith(".svc"):
-   continue
+  if file.endswith(".svc"):
+   services.append(file)
 
-  service = type("", (), {})()  # Empty object
-  path = link(ROOT, "svc", file)
-
-  service.__filename__ = file
-
-  lines = None
-  with open(path, "r") as f: lines = f.readlines()
-
-  for line in lines:
-   for bank in banks:
-    if line.startswith(bank):
-     exec(line, builtins.__dict__)
-
-  try:
-   exec("".join(lines), service.__dict__)
-  except Exception as e:
-   _exception_error(e, "SERVICE \"" + service.__filename__ + "\"", "LOAD")
-   print("service \"" + service.__filename__ + "\" skipped")
-   continue
-
-  services.append(service)
+ for i, service in enumerate(services):
+  if i < MAX_PROCESS - 1:
+   run(link("svc", service), i + 1)
 
 run("/app/file_explorer.app")
 # run("/app/planet_name.app")
@@ -159,73 +176,62 @@ run("/app/file_explorer.app")
 # run("/test.app")
 
 # Loop
-def per_tick_update():
- global process
- BUTTON._update_state()
-
- if hasattr(process, "update"):
-  for bank in banks:
-   if hasattr(process, bank):
-    builtins.__dict__[bank] = process.__dict__[bank]
-  try:
-   process.update()
-  except Exception as e:
-   _exception_error(e, "PROCESS \"" + process.__filename__ + "\"", "UPDATE")
-   process = None
-
-def per_flip_update():
- global process
- if hasattr(process, "draw"):
-  for bank in banks:
-   if hasattr(process, bank):
-    builtins.__dict__[bank] = process.__dict__[bank]
-  try:
-   process.draw()
-  except Exception as e:
-   _exception_error(e, "PROCESS \"" + process.__filename__ + "\"", "DRAW")
-   process = None
-  flip()
-
-def per_service_update():
- global services
- i = 0
- while i < len(services):
-  service = services[i]
-  try:
-   if hasattr(service, "serve"):
-    for bank in banks:
-     if hasattr(service, bank):
-      builtins.__dict__[bank] = service.__dict__[bank]
-    service.serve()
-
-   i += 1
-  except Exception as e:
-   _exception_error(e, "SERVICE \"" + service.__filename__ + "\"", "SERVE")
-   print("service \"" + service.__filename__ + "\" disabled")
-
-   services.pop(i)
-   # Do not increment `i` because the list has shifted
-
-async def asyncio_tick_update():
+builtins.process = None # Reference of current iterated process
+async def asyncio_tick():
+ f = PROCESS_FIELDS.tick
  while True:
-  per_tick_update()
-  await asyncio.sleep(1 / TICK)
+  BUTTON._update_state()
+  for i, upref in enumerate(process_upref.tick):
+   if not upref: continue
+   builtins.process = process[i]
+   try:
+    upref()
+   except Exception as e:
+    _exception_error(e, i, f.label)
+  await asyncio.sleep(f.interval)
 
-async def asyncio_flip_update():
+async def asyncio_draw():
+ f = PROCESS_FIELDS.draw
  while True:
-  per_flip_update()
-  await asyncio.sleep(1 / TICK)
+  for i, upref in enumerate(process_upref.draw):
+   if not upref: continue
+   builtins.process = process[i]
+   mem(0)
+   try:
+    upref()
+   except Exception as e:
+    _exception_error(e, i, f.label)
+  VIDEO.flip()
+  await asyncio.sleep(f.interval)
 
-async def asyncio_service_update():
- while services:
-  per_service_update()
-  await asyncio.sleep(1 / TICK)
+def generate_asyncio_periodic(field):
+ f = PROCESS_FIELDS[field]
+ async def periodic_task():
+  while True:
+   for i, upref in enumerate(process_upref[field]):
+    if not upref: continue
+    builtins.process = process[i]
+    try:
+     upref()
+    except Exception as e:
+     _exception_error(e, i, f.label)
+   await asyncio.sleep(f.interval)
+ return periodic_task
 
 async def asyncio_collection():
+ periodic_tasks = [
+  generate_asyncio_periodic(field)
+  for field in PROCESS_FIELDS
+  if field.startswith("period_")
+ ]
  await asyncio.gather(
-  asyncio_tick_update(),
-  asyncio_flip_update(),
-  asyncio_service_update(),
+  asyncio_tick(),
+  asyncio_draw(),
+  *(
+   generate_asyncio_periodic(field)()
+   for field in PROCESS_FIELDS
+   if field.startswith("period_")
+  )
  )
 
 asyncio.run(asyncio_collection())
