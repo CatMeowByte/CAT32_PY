@@ -1,0 +1,11 @@
+def catsay(message):
+  border = "─" * (len(message) + 1)
+
+  print(f" ╭─{border}╮")
+  print(f" │ {message} │")
+  print(f" ╰┬{border}╯")
+  print( "  ╰ │\_____/│")
+  print( "   =│ O _ O │=")
+  print( "    ╰───────╯")
+
+catsay("Meow, Cat!")

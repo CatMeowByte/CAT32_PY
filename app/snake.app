@@ -47,7 +47,7 @@ def menu_input():
    elif sel == 1:
     state = "options"
    elif sel == 2:
-    get_tree().quit()
+    stop()
   elif state == "options":
    if sel == 0:
     sound_enabled = not sound_enabled

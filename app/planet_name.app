@@ -130,11 +130,13 @@ def update():
  if btnr(BUTTON.ACCEPT):
   current_planet_name = generate_name()
   print(current_planet_name)
+ if btnr(BUTTON.CANCEL):
+  stop()
 
 def draw():
  cls(COLOR.DARK_BLUE)
  text(0, 0, "Sci-Fi Planet Generator", COLOR.BLUE)
- 
+
  cx = (VIDEO.W - len(current_planet_name) * 4) / 2
  cy = (VIDEO.H / 2) - 4
  mask(COLOR.BLACK, False)
