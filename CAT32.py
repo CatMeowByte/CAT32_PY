@@ -5,13 +5,17 @@ import random
 import sys
 import time
 
+# Public
+def define_public(**kwargs): builtins.__dict__.update(kwargs)
+
 # Libraries
 from lib.boxdict import Box
-builtins.Box = Box
-
 from lib.utilities import clamp, oneshot
-builtins.oneshot = oneshot
-builtins.clamp = clamp
+define_public(
+ Box = Box,
+ oneshot = oneshot,
+ clamp = clamp,
+)
 
 # TODO:
 # process is a pool
@@ -23,7 +27,9 @@ builtins.clamp = clamp
 # when error it gets removed, not popped << needs to be implemented
 
 # Constants
-builtins.TICK = 30
+define_public(
+ TICK = 30,
+)
 MAX_PROCESSES = 4
 BANKS = [
  "_sprite_",
@@ -33,8 +39,13 @@ BANKS = [
 LAUNCHER = "/app/file_explorer.app"
 
 # Platform specific
-builtins.MICROPYTHON = sys.implementation.name == "micropython"
-builtins.ROOT = "/" if MICROPYTHON else os.path.dirname(os.path.abspath(__file__))
+define_public(
+ MICROPYTHON = sys.implementation.name == "micropython",
+)
+
+define_public(
+ ROOT = "/" if MICROPYTHON else os.path.dirname(os.path.abspath(__file__)),
+)
 
 # HW
 # Platform specific imports
@@ -51,26 +62,34 @@ def platform_specific_module():
  for builtin_name, module_suffix in module_map.items():
   module = __import__(f"hw.{dir_prefix}.{module_suffix}", fromlist=["*"])
   setattr(builtins, builtin_name, module)
+
 # VIDEO
 VIDEO.COLOR = COLOR
 VIDEO.FONT = FONT
 VIDEO.init()
-builtins.cam = VIDEO.camera
-builtins.mem = VIDEO.memsel
-builtins.pix = VIDEO.pixel
-builtins.line = VIDEO.line
-builtins.rect = VIDEO.rect
-builtins.text = VIDEO.text
-builtins.blit = VIDEO.blit
-builtins.cls = VIDEO.clear
-# COLOR
-builtins.mask = COLOR.transparent
-# BUTTON
-builtins.btn = BUTTON.is_pressed
-builtins.btnr = BUTTON.get_repeat
-# STORAGE
-builtins.link = STORAGE.link
-builtins.lsd = STORAGE.lsd
+
+define_public(
+ # VIDEO
+ cam = VIDEO.camera,
+ mem = VIDEO.memsel,
+ pix = VIDEO.pixel,
+ line = VIDEO.line,
+ rect = VIDEO.rect,
+ text = VIDEO.text,
+ blit = VIDEO.blit,
+ cls = VIDEO.clear,
+
+ # COLOR
+ mask = COLOR.transparent,
+
+ # BUTTON
+ btn = BUTTON.is_pressed,
+ btnr = BUTTON.get_repeat,
+
+ # STORAGE
+ link = STORAGE.link,
+ lsd = STORAGE.lsd,
+)
 
 # Internal
 def _exception_error(e, pid, at):
@@ -81,9 +100,9 @@ def _exception_error(e, pid, at):
   tb = tb.tb_next
  line_number = tb.tb_lineno
 
- print(f"{at} ERROR")
- print(processes[pid]._filepath_)
- print(f"{line_number}: {error_type}")
+ print(f"[{at} ERROR]")
+ print(f"{processes[pid]._filepath_}:{line_number}")
+ print(f"{error_type}:")
  print(error_message)
 
 # Process
@@ -110,6 +129,11 @@ processes_upref = Box({
 
 processes = [None] * MAX_PROCESSES
 
+def kill(pid):
+ for field in processes_upref:
+  processes_upref[field][pid] = None
+ processes[pid] = None
+
 def run(script, pid=0):
  pid = clamp(pid, 0, MAX_PROCESSES - 1)
  kill(pid)
@@ -132,7 +156,7 @@ def run(script, pid=0):
  except Exception as e:
   _exception_error(e, pid, "LOAD")
   kill(pid)
-  print(f"process {pid} killed.")
+  print(f"process {pid} killed")
 
  for field in PROCESSES_FIELDS:
   attr = "update" if field == "tick" else field # Exception
@@ -145,16 +169,10 @@ def run(script, pid=0):
  except Exception as e:
   _exception_error(e, pid, "INIT")
   kill(pid)
-  print(f"process {pid} killed.")
+  print(f"process {pid} killed")
 
-# FIXME: if running is autoupdating the current process and ref, and killing is blanking it, then what is stop?
-def stop():
+def exit_to_menu():
  run(LAUNCHER)
-
-def kill(pid):
- for field in processes_upref:
-  processes_upref[field][pid] = None
- processes[pid] = None
 
 # Generic
 def timer(duration):
@@ -163,12 +181,16 @@ def timer(duration):
 def rnd(value=1.0):
  return random.random() * value
 
-# Process
-builtins.run = run
-builtins.stop = stop
-# Generic
-builtins.timer = timer
-builtins.rnd = rnd
+define_public(
+ # Process
+ kill = kill,
+ run = run,
+ exit_to_menu = exit_to_menu,
+
+ # Generic
+ timer = timer,
+ rnd = rnd,
+)
 
 @oneshot
 def load_services():
@@ -181,13 +203,11 @@ def load_services():
   if i < MAX_PROCESSES - 1:
    run(link("svc", service), i + 1)
 
-run("/app/file_explorer.app")
-# run("/app/planet_name.app")
-# run("/app/snake.app")
-# run("/test.app")
+run(LAUNCHER)
 
 # Loop
 builtins.process = None # Reference of current iterated process
+
 async def asyncio_tick():
  f = PROCESSES_FIELDS.tick
  while True:
@@ -200,22 +220,22 @@ async def asyncio_tick():
    except Exception as e:
     _exception_error(e, i, f.label)
     kill(pid)
-    print(f"process {pid} killed.")
+    print(f"process {pid} killed")
   await asyncio.sleep(f.interval)
 
 async def asyncio_draw():
  f = PROCESSES_FIELDS.draw
  while True:
-  for i, upref in enumerate(processes_upref.draw):
+  for pid, upref in enumerate(processes_upref.draw):
    if not upref: continue
-   builtins.process = processes[i]
+   builtins.process = processes[pid]
    mem(0)
    try:
     upref()
    except Exception as e:
-    _exception_error(e, i, f.label)
+    _exception_error(e, pid, f.label)
     kill(pid)
-    print(f"process {pid} killed.")
+    print(f"process {pid} killed")
   VIDEO.flip()
   await asyncio.sleep(f.interval)
 
@@ -223,15 +243,15 @@ def generate_asyncio_periodic(field):
  f = PROCESSES_FIELDS[field]
  async def periodic_task():
   while True:
-   for i, upref in enumerate(processes_upref[field]):
+   for pid, upref in enumerate(processes_upref[field]):
     if not upref: continue
     builtins.process = processes[i]
     try:
      upref()
     except Exception as e:
-     _exception_error(e, i, f.label)
+     _exception_error(e, pid, f.label)
      kill(pid)
-     print(f"process {pid} killed.")
+     print(f"process {pid} killed")
    await asyncio.sleep(f.interval)
  return periodic_task
 
