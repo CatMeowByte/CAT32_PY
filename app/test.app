@@ -38,3 +38,6 @@ def input():
   if dir == [1, 0]:
    boost = 1
   dir = [1, 0]
+
+ if btnr(BUTTON.CANCEL):
+  exit_to_menu()

@@ -1,30 +1,42 @@
 import asyncio
 import builtins
 import os
-import random
 import sys
 import time
 
 # Public
+try:
+    # Attempt to modify builtins.__dict__
+    builtins.__dict__["injected"] = 42
+except Exception as e:
+    print("Error:", e)  # Output: 'TypeError: 'dict' object isn't writable' ❌
+
+print("injected" in dir(builtins))  # Output: False
 def define_public(**kwargs): builtins.__dict__.update(kwargs)
 
-# Libraries
-from lib.boxdict import Box
-from lib.utilities import clamp, oneshot
+# Platform specific
 define_public(
- Box = Box,
- oneshot = oneshot,
- clamp = clamp,
+ MICROPYTHON = sys.implementation.name == "micropython",
 )
 
-# TODO:
-# process is a pool
-# maximum is 8 process
-# use asyncio to run task in parallel
-# process 0 is application
-# others are service
-# 1.menu, 2.input, 3.clock 4.network
-# when error it gets removed, not popped << needs to be implemented
+define_public(
+ ROOT = "/" if MICROPYTHON else os.path.dirname(os.path.abspath(__file__)),
+)
+
+# Libraries
+from lib import boxdict, utilities, chronos
+
+define_public(
+ Box = boxdict.Box,
+ oneshot = utilities.oneshot,
+ clamp = utilities.clamp,
+ rnd = utilities.rnd,
+ get_epoch = chronos.get_epoch,
+ get_time = chronos.get_time,
+)
+
+# WARNING:
+# BUILTINS INJECTION DOESNT WORK!!!!!!!!!!!!!!!
 
 # Constants
 define_public(
@@ -37,15 +49,6 @@ BANKS = [
  "_tracks_",
 ]
 LAUNCHER = "/app/file_explorer.app"
-
-# Platform specific
-define_public(
- MICROPYTHON = sys.implementation.name == "micropython",
-)
-
-define_public(
- ROOT = "/" if MICROPYTHON else os.path.dirname(os.path.abspath(__file__)),
-)
 
 # HW
 # Platform specific imports
@@ -174,22 +177,11 @@ def run(script, pid=0):
 def exit_to_menu():
  run(LAUNCHER)
 
-# Generic
-def timer(duration):
- time.sleep(duration)
-
-def rnd(value=1.0):
- return random.random() * value
-
 define_public(
  # Process
  kill = kill,
  run = run,
  exit_to_menu = exit_to_menu,
-
- # Generic
- timer = timer,
- rnd = rnd,
 )
 
 @oneshot
@@ -212,13 +204,13 @@ async def asyncio_tick():
  f = PROCESSES_FIELDS.tick
  while True:
   BUTTON._update_state()
-  for i, upref in enumerate(processes_upref.tick):
+  for pid, upref in enumerate(processes_upref.tick):
    if not upref: continue
-   builtins.process = processes[i]
+   builtins.process = processes[pid]
    try:
     upref()
    except Exception as e:
-    _exception_error(e, i, f.label)
+    _exception_error(e, pid, f.label)
     kill(pid)
     print(f"process {pid} killed")
   await asyncio.sleep(f.interval)
@@ -242,17 +234,19 @@ async def asyncio_draw():
 def generate_asyncio_periodic(field):
  f = PROCESSES_FIELDS[field]
  async def periodic_task():
+  pid = 0
   while True:
-   for pid, upref in enumerate(processes_upref[field]):
-    if not upref: continue
-    builtins.process = processes[i]
+   upref = processes_upref[field][pid]
+   if upref:
+    builtins.process = processes[pid]
     try:
      upref()
     except Exception as e:
      _exception_error(e, pid, f.label)
      kill(pid)
      print(f"process {pid} killed")
-   await asyncio.sleep(f.interval)
+   await asyncio.sleep(f.interval / MAX_PROCESSES)
+   pid = (pid + 1) % MAX_PROCESSES
  return periodic_task
 
 async def asyncio_collection():
