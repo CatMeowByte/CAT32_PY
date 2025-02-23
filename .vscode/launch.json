@@ -5,7 +5,7 @@
             "name": "Run CAT-32",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/main.py",
+            "program": "${workspaceFolder}/boot.py",
             "console": "integratedTerminal",
             "cwd": "${workspaceFolder}"
         }

@@ -1,18 +1,5 @@
 import os
 
-def link(*point):
- if not point:
-  return ""
-
- base, *ex = point
- path = base if base == "/" else base.rstrip("/")
-
- for p in ex:
-  if p:
-   path = os.path.join(path, p.strip(os.sep))
-
- return path
-
 def lsd(path):
  dirs = []
  files = []

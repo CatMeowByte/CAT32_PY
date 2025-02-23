@@ -5,13 +5,6 @@ import sys
 import time
 
 # Public
-try:
-    # Attempt to modify builtins.__dict__
-    builtins.__dict__["injected"] = 42
-except Exception as e:
-    print("Error:", e)  # Output: 'TypeError: 'dict' object isn't writable' ❌
-
-print("injected" in dir(builtins))  # Output: False
 def define_public(**kwargs): builtins.__dict__.update(kwargs)
 
 # Platform specific
