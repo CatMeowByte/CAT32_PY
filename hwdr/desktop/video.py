@@ -1,5 +1,9 @@
 import sdl2
 
+# Dependencies
+COLOR = None
+FONT = None
+
 SCALE = 3
 W = 120
 HVIEW = 120

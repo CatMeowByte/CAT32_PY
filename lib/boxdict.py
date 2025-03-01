@@ -22,6 +22,10 @@ class Box(dict):
   except KeyError:
    raise AttributeError(f"'{key}' not in '{type(self).__name__}'")
 
+ def __str__(self):
+  items = (f"{k} = {v!r}" for k, v in self.items())
+  return type(self).__name__ + "(\n " + ',\n '.join(items) + ",\n)"
+
  def __repr__(self):
   items = (f"{k}={v!r}" for k, v in self.items())
-  return f"{type(self).__name__}({', '.join(items)})"
+  return type(self).__name__ + "(" + ', '.join(items) + ")"
