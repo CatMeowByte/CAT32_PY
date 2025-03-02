@@ -46,11 +46,13 @@ def kill(pid):
 def run(script, pid=0):
  pid = clamp(pid, 0, MAX_PROCESSES - 1)
  kill(pid)
- obj, obj_space = type("", (), {})(), Box()
  path = link(GLOBAL.ROOT, script)
- obj_space._filename_ = path.rsplit("/", 1)[-1]
+ obj_name = path.rsplit("/", 1)[-1]
+ obj, obj_space = type(obj_name.rsplit(".", 1)[0], (), {})(), Box()
+ obj_space._filename_ = obj_name
  obj_space._pid_ = pid
  obj_space.GLOBAL = GLOBAL
+ print(GLOBAL)
  obj_space.update(GLOBAL.STATIC)
  lines = None
  with open(path, "r") as f: lines = f.readlines()
@@ -89,7 +91,6 @@ make_static(
  exit_to_menu = exit_to_menu,
 )
 
-@oneshot
 def load_services():
  services = []
  for file in os.listdir(link(GLOBAL.ROOT, "svc")):
@@ -99,6 +100,7 @@ def load_services():
  for i, service in enumerate(services):
   if i < MAX_PROCESSES - 1:
    run(link("svc", service), i + 1)
+load_services()
 
 run(LAUNCHER)
 

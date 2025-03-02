@@ -5,11 +5,6 @@
 
 import random
 
-# Decorators
-def oneshot(func):
- func()
- return None
-
 # Functions
 def clamp(value, a, b):
  return max(a, min(value, b))
