@@ -46,28 +46,26 @@ def kill(pid):
 def run(script, pid=0):
  pid = clamp(pid, 0, MAX_PROCESSES - 1)
  kill(pid)
- processes[pid] = type("", (), {})()  # Empty object
+ obj, obj_space = type("", (), {})(), Box()
  path = link(GLOBAL.ROOT, script)
-
- processes[pid]._filename_ = path.rsplit("/", 1)[-1]
- processes[pid]._pid_ = pid
- processes[pid].GLOBAL = GLOBAL
- processes[pid].__dict__.update(static_ref)
-
+ obj_space._filename_ = path.rsplit("/", 1)[-1]
+ obj_space._pid_ = pid
+ obj_space.GLOBAL = GLOBAL
+ obj_space.update(GLOBAL.STATIC)
  lines = None
  with open(path, "r") as f: lines = f.readlines()
-
  for line in lines:
   for bank in BANKS:
-   if line.startswith(bank):
-    exec(line, processes[pid].__dict__)
-
+   if line.startswith(bank): exec(line, obj_space)
  try:
-  exec("".join(lines), processes[pid].__dict__)
+  exec("".join(lines), obj_space)
  except Exception as e:
   exception_error(e, pid, "LOAD")
   kill(pid)
   print(f"process {pid} killed")
+
+ for k, v in obj_space.items(): setattr(obj, k, v)
+ processes[pid] = obj
 
  for field in processes_fields:
   attr = "update" if field == "tick" else field # Exception

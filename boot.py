@@ -1,6 +1,8 @@
 import os
 import sys
 
+# TODO: overwrite all __dict__ usage since it might not work
+
 from lib.boxdict import Box
 from lib.utilities import oneshot, clamp, remap, rnd, link
 
@@ -17,6 +19,7 @@ def make_static(**kwargs): STATIC.update(kwargs)
 o = print
 
 make_static(
+ STATIC = STATIC, # Reference
  make_static = make_static,
  Box = Box,
  oneshot = oneshot, clamp = clamp, remap = remap, rnd = rnd, link = link,
@@ -42,9 +45,10 @@ def add_hardware_drivers():
  hwdr_dev = "console" if GLOBAL.MICROPYTHON else "desktop"
  for obj_name, hwdr_file in hwdr_map.items():
   path = link("hwdr", hwdr_dev, hwdr_file + ".py")
-  obj = type("", (), {})()  # Empty object
-  with open(path) as f: code = f.read()
-  exec(code, obj.__dict__)
+  obj, obj_space = type("", (), {})(), Box()
+  with open(path, "r") as f: code = f.read()
+  exec(code, obj_space)
+  for k, v in obj_space.items(): setattr(obj, k, v)
   setattr(STATIC, obj_name, obj)
 
 # Dependencies
@@ -81,11 +85,11 @@ TASK_MANAGER = "/core/taskmgr.py"
 
 @oneshot
 def start_task_manager():
- obj = type("", (), {})()  # Empty object
- obj.GLOBAL = GLOBAL
- obj.__dict__.update(STATIC)
- obj.static_ref = STATIC
- with open(link(GLOBAL.ROOT, TASK_MANAGER)) as f: code = f.read()
- exec(code, obj.__dict__)
+ obj, obj_space = type("", (), {})(), Box()
+ obj_space.GLOBAL = GLOBAL
+ obj_space.update(STATIC)
+ with open(link(GLOBAL.ROOT, TASK_MANAGER), "r") as f: code = f.read()
+ exec(code, obj_space)
+ for k, v in obj_space.items(): setattr(obj, k, v)
 
 # TODO: Shutdown sequence
