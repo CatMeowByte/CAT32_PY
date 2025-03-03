@@ -34,13 +34,15 @@ PALETTE = [
  (255, 204, 170)
 ]
 
-mask = 0b00000000000000000000000000000001
+mask = Box(
+ bit = 0b00000000000000000000000000000001
+)
 
 def transparent(color=-1, hide=False):
  global mask
  if color == -1:
-  mask = 1
+  mask.bit = 1
  elif hide:
-  mask |= (1 << color)
+  mask.bit |= (1 << color)
  else:
-  mask &= ~(1 << color)
+  mask.bit &= ~(1 << color)

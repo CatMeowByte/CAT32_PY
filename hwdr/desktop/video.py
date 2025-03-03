@@ -92,7 +92,7 @@ def pixel_set(x, y, color):
 
  if x < 0 or x >= SIZE.W or y < 0 or y >= SIZE.H:
   return
- if (COLOR.mask & (1 << color)) != 0:
+ if (COLOR.mask.bit & (1 << color)) != 0:
   return
  index = (y * SIZE.W + x) // 2
  is_hnibble = x % 2 == 0
@@ -282,7 +282,24 @@ def blit(
 def clear(color=0):
  mem[:] = bytes([((color & 0x0F) << 4) | (color & 0x0F)] * len(mem))
 
+import time
+if GLOBAL.MICROPYTHON:
+ get_time = time.ticks_ms
+ time_diff = time.ticks_diff
+else:
+ get_time = lambda: int(time.time() * 1000)  # Convert seconds to ms
+ time_diff = lambda a, b: a - b  # Simple subtraction
+
+t = get_time()
+
 def flip():
+ # Ticker
+ global t
+ now = get_time()
+ memsel(2)
+ text(SIZE.W / 2 - 10, 12, f"{1000 / (time_diff(now, t) or 1):05.2f}", COLOR.DARK_BLUE, COLOR.WHITE)  # Avoid div by zero
+ t = now
+
  pixels = bytearray(SIZE.W * SIZE.HFULL * 4)
  for y in range(SIZE.HFULL):
   for x in range(SIZE.W):
