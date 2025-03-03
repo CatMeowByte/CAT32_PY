@@ -129,7 +129,7 @@ def update():
  global current_planet_name
  if btnr(BUTTON.ACCEPT):
   current_planet_name = generate_name()
-  print(current_planet_name)
+  o(current_planet_name)
  if btnr(BUTTON.CANCEL):
   exit_to_menu()
 

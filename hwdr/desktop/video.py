@@ -297,7 +297,7 @@ def flip():
  global t
  now = get_time()
  memsel(2)
- text(SIZE.W / 2 - 10, 12, f"{1000 / (time_diff(now, t) or 1):05.2f}", COLOR.DARK_BLUE, COLOR.WHITE)  # Avoid div by zero
+ text(SIZE.W - 20, 12, f"{1000 / (time_diff(now, t) or 1):05.2f}", COLOR.DARK_BLUE, COLOR.WHITE)  # Avoid div by zero
  t = now
 
  pixels = bytearray(SIZE.W * SIZE.HFULL * 4)

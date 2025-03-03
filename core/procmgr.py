@@ -119,6 +119,34 @@ async def asyncio_tick():
     print(f"process {pid} killed")
   await asyncio.sleep(f.interval)
 
+# Test for a stdout redirection
+# Very hacky
+# Untested on console
+import sys
+
+class StdoutInterceptor:
+ def __init__(self):
+  self.original_stdout = sys.__stdout__  # Store original stdout
+  self.buffer = [""] * 4
+
+ def write(self, data):
+  self.buffer.pop(0)
+  self.buffer.append(data)
+  # self.original_stdout.write(f"STDOUT: {data}")
+  # Draw
+  VIDEO.memsel(2)
+  VIDEO.clear()
+  for i, t in enumerate(self.buffer):
+   VIDEO.text(0, (i * 5) - 2, t, COLOR.WHITE)
+
+  # sys.__stdout__.write(repr(self.buffer))
+
+ def flush(self):
+  self.original_stdout.flush()
+
+# Replace stdout
+sys.stdout = StdoutInterceptor()
+
 async def asyncio_draw():
  f = processes_fields.draw
  while True:

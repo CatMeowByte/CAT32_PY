@@ -15,7 +15,7 @@ GLOBAL.ROOT = "/" if GLOBAL.MICROPYTHON else os.path.dirname(os.path.abspath(__f
 GLOBAL.TICK = 30
 GLOBAL.STATIC = STATIC # Reference
 
-o = print
+def o(*args, sep=" "): sys.stdout.write(sep.join(map(str, args)))
 
 def make_static(**kwargs): STATIC.update(kwargs)
 
