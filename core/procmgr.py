@@ -9,6 +9,8 @@ BANKS = (
 )
 LAUNCHER = "/app/file_explorer.app"
 
+o(cam() is VIDEO.camera())
+
 def exception_error(e, pid, at):
  error_type = type(e).__name__
  error_message = str(e)
@@ -17,10 +19,10 @@ def exception_error(e, pid, at):
   tb = tb.tb_next
  line_number = tb.tb_lineno
 
- print(f"[{at} ERROR]")
- print(f"{processes[pid]._filename_}:{line_number}")
- print(f"{error_type}:")
- print(error_message)
+ o(f"[{at} ERROR]")
+ o(f"{processes[pid]._filename_}:{line_number}")
+ o(f"{error_type}:")
+ o(error_message)
 
 # Process
 processes_fields = Box(
@@ -43,19 +45,16 @@ def kill(pid):
   processes_event_ref[field][pid] = None
  processes[pid] = None
 
-def run(script, pid=0):
+def run(path, pid=0):
  pid = clamp(pid, 0, MAX_PROCESSES - 1)
  kill(pid)
- path = link(GLOBAL.ROOT, script)
- obj_name = path.rsplit("/", 1)[-1]
- obj, obj_space = type(obj_name.rsplit(".", 1)[0], (), {})(), Box()
- obj_space._filename_ = obj_name
+ obj, obj_space = type(f"proc:{path}", (), {})(), Box()
+ obj_space._filename_ = path.rsplit("/", 1)[-1]
  obj_space._pid_ = pid
  obj_space.GLOBAL = GLOBAL
- print(GLOBAL)
  obj_space.update(GLOBAL.STATIC)
  lines = None
- with open(path, "r") as f: lines = f.readlines()
+ with open(link(GLOBAL.ROOT, path), "r") as f: lines = f.readlines()
  for line in lines:
   for bank in BANKS:
    if line.startswith(bank): exec(line, obj_space)
@@ -99,7 +98,7 @@ def load_services():
 
  for i, service in enumerate(services):
   if i < MAX_PROCESSES - 1:
-   run(link("svc", service), i + 1)
+   run(link("/svc", service), i + 1)
 load_services()
 
 run(LAUNCHER)
@@ -140,7 +139,7 @@ async def asyncio_draw():
 
 def generate_asyncio_periodic(field):
  f = processes_fields[field]
- async def periodic_task():
+ async def periodic_event():
   pid = 0
   while True:
    upref = processes_event_ref[field][pid]
@@ -154,7 +153,7 @@ def generate_asyncio_periodic(field):
      print(f"process {pid} killed")
    await asyncio.sleep(f.interval / MAX_PROCESSES)
    pid = (pid + 1) % MAX_PROCESSES
- return periodic_task
+ return periodic_event
 
 async def asyncio_collection():
  await asyncio.gather(

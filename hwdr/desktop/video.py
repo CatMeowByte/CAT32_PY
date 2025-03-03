@@ -3,6 +3,7 @@ import sdl2
 # Dependencies
 COLOR = None
 FONT = None
+def depends(**kwargs): globals().update(kwargs)
 
 SCALE = 3
 W = 120
@@ -14,11 +15,12 @@ MEM_BOT = 2
 
 renderer = None
 texture = None
-mem = bytearray()
 H = 0
-mem_top = bytearray()
-mem_view = bytearray()
-mem_bot = bytearray()
+buffer = bytearray([0x00] * (W * (HBAR + HVIEW // 2)))
+mem = bytearray()
+mem_top = memoryview(buffer)[0:(W * HBAR) // 2]
+mem_view = memoryview(buffer)[(W * HBAR) // 2:(W * HBAR + W * HVIEW) // 2]
+mem_bot = memoryview(buffer)[(W * HBAR + W * HVIEW) // 2:]
 cam = [0, 0]
 text_wrap = False
 
@@ -47,14 +49,6 @@ def init():
   W,
   HBAR + HVIEW + HBAR
  )
-
- mem_top = bytearray((W * HBAR) // 2)
- mem_view = bytearray((W * HVIEW) // 2)
- mem_bot = bytearray((W * HBAR) // 2)
-
- mem_top[:] = [0] * len(mem_top)
- mem_view[:] = [0] * len(mem_view)
- mem_bot[:] = [0] * len(mem_bot)
 
  memsel()
 
@@ -272,34 +266,24 @@ def blit(
  dest_x, dest_y, dest_w, dest_h,
  rotation=0
 ):
- size = 128 if process._pid_ == 0 else 64
+ size = 128 if GLOBAL.PROCESS._pid_ == 0 else 64
  blit_source_to_dest(
-  process._sprite_,
+  GLOBAL.PROCESS._sprite_,
   size, size,
   src_x, src_y, src_w, src_h,
-  120, 160,
+  W, (HBAR + HVIEW + HBAR),
   dest_x, dest_y, dest_w, dest_h,
   rotation=0
  )
 
 def clear(color=0):
- mem[:] = [((color & 0x0F) << 4) | (color & 0x0F)] * len(mem)
+ mem[:] = bytes([((color & 0x0F) << 4) | (color & 0x0F)] * len(mem))
 
 def flip():
  pixels = bytearray(W * (HBAR + HVIEW + HBAR) * 4)
  for y in range(HBAR + HVIEW + HBAR):
-  if y < HBAR:
-   buffer = mem_top
-   oy = y
-  elif y < HBAR + HVIEW:
-   buffer = mem_view
-   oy = y - HBAR
-  else:
-   buffer = mem_bot
-   oy = y - HBAR - HVIEW
-
   for x in range(W):
-   memory_byte = buffer[(oy * W + x) // 2]
+   memory_byte = buffer[(y * W + x) // 2]
    color_index = (memory_byte >> 4) if x % 2 == 0 else (memory_byte & 0x0F)
    pixel_index = (y * W + x) * 4
    r, g, b = COLOR.PALETTE[color_index]

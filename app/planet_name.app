@@ -136,7 +136,8 @@ def update():
 def draw():
  cls(COLOR.DARK_BLUE)
  text(0, 0, "Sci-Fi Planet Generator", COLOR.BLUE)
-
+ cam(-32,-32)
+ o(cam() is VIDEO.camera())
  cx = (VIDEO.W - len(current_planet_name) * 4) / 2
  cy = (VIDEO.H / 2) - 4
  mask(COLOR.BLACK, False)

@@ -1,5 +1,7 @@
+time = bind("/core/chrono.py")
+
 width = 50
-c = get_time()
+c = time.get_time()
 
 def draw_num(n, xoff):
  draw_spr(n % 5, n // 5, xoff)
@@ -9,7 +11,7 @@ def draw_spr(u, v, xoff):
 
 def period_1():
  global c
- c = get_time()
+ c = time.get_time()
 
 def draw():
  mem(1)
