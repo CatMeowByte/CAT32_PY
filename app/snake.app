@@ -142,7 +142,7 @@ def draw_menu():
 
 def draw_game():
  global food
- cam((-VIDEO.W + MAP_SIZE) / 2, (-VIDEO.H+ + MAP_SIZE) / 2)
+ cam((-VIDEO.SIZE.W + MAP_SIZE) / 2, (-VIDEO.SIZE.H+ + MAP_SIZE) / 2)
  cls(COLOR.DARK_BLUE)
  rect(-1, -1, MAP_SIZE + 2, MAP_SIZE + 2, COLOR.DARK_GRAY)
 

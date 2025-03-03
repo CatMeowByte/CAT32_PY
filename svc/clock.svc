@@ -7,7 +7,7 @@ def draw_num(n, xoff):
  draw_spr(n % 5, n // 5, xoff)
 
 def draw_spr(u, v, xoff):
- blit(u * 8, v * 16, 8, 16, VIDEO.W - 8 * xoff, 2, 8, 16, 0)
+ blit(u * 8, v * 16, 8, 16, VIDEO.SIZE.W - 8 * xoff, 2, 8, 16, 0)
 
 def period_1():
  global c
@@ -15,7 +15,7 @@ def period_1():
 
 def draw():
  mem(1)
- rect(VIDEO.W - width, 0, width, 40, COLOR.DARK_BLUE, 1)
+ rect(VIDEO.SIZE.W - width, 0, width, 40, COLOR.DARK_BLUE, 1)
  draw_num(c.hour // 10, 6)
  draw_num(c.hour % 10, 5)
  if c.second % 2: draw_spr(5, 0, 4)

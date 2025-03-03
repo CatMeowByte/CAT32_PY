@@ -6,21 +6,24 @@ FONT = None
 def depends(**kwargs): globals().update(kwargs)
 
 SCALE = 3
-W = 120
-HVIEW = 120
-HBAR = 20
+SIZE = Box(
+ W = 120,
+ H = 0,
+ HVIEW = 120,
+ HBAR = 20,
+ HFULL = 160,
+)
 MEM_VIEW = 0
 MEM_TOP = 1
 MEM_BOT = 2
 
 renderer = None
 texture = None
-H = 0
-buffer = bytearray([0x00] * (W * (HBAR + HVIEW // 2)))
+buffer = bytearray([0x00] * (SIZE.W * (SIZE.HBAR + SIZE.HVIEW // 2)))
 mem = bytearray()
-mem_top = memoryview(buffer)[0:(W * HBAR) // 2]
-mem_view = memoryview(buffer)[(W * HBAR) // 2:(W * HBAR + W * HVIEW) // 2]
-mem_bot = memoryview(buffer)[(W * HBAR + W * HVIEW) // 2:]
+mem_top = memoryview(buffer)[0:(SIZE.W * SIZE.HBAR) // 2]
+mem_view = memoryview(buffer)[(SIZE.W * SIZE.HBAR) // 2:(SIZE.W * (SIZE.HBAR + SIZE.HVIEW)) // 2]
+mem_bot = memoryview(buffer)[(SIZE.W * (SIZE.HBAR + SIZE.HVIEW)) // 2:]
 cam = [0, 0]
 text_wrap = False
 
@@ -34,8 +37,8 @@ def init():
   b"CAT32 Python",
   sdl2.SDL_WINDOWPOS_CENTERED,
   sdl2.SDL_WINDOWPOS_CENTERED,
-  W * SCALE,
-  (HBAR + HVIEW + HBAR) * SCALE,
+  SIZE.W * SCALE,
+  SIZE.HFULL * SCALE,
   sdl2.SDL_WINDOW_SHOWN
  )
 
@@ -46,26 +49,26 @@ def init():
   renderer,
   sdl2.SDL_PIXELFORMAT_RGBA8888,
   sdl2.SDL_TEXTUREACCESS_STREAMING,
-  W,
-  HBAR + HVIEW + HBAR
+  SIZE.W,
+  SIZE.HFULL
  )
 
  memsel()
 
-def memsel(id=MEM_VIEW):
- global mem, H, cam
+def memsel(i=MEM_VIEW):
+ global mem, SIZE, cam
 
  cam = [0, 0]
 
- if id == MEM_VIEW:
+ if i == MEM_VIEW:
   mem = mem_view
-  H = HVIEW
- elif id == MEM_TOP:
+  SIZE.H = SIZE.HVIEW
+ elif i == MEM_TOP:
   mem = mem_top
-  H = HBAR
+  SIZE.H = SIZE.HBAR
  else:
   mem = mem_bot
-  H = HBAR
+  SIZE.H = SIZE.HBAR
 
 def camera(x=0, y=0):
  global cam
@@ -77,9 +80,9 @@ def pixel_get(x, y):
  x = int(x)
  y = int(y)
 
- if x < 0 or x >= W or y < 0 or y >= H:
+ if x < 0 or x >= SIZE.W or y < 0 or y >= SIZE.H:
   return -1
- index = (y * W + x) // 2
+ index = (y * SIZE.W + x) // 2
  return (mem[index] >> 4) if x % 2 == 0 else (mem[index] & 0x0F)
 
 def pixel_set(x, y, color):
@@ -87,11 +90,11 @@ def pixel_set(x, y, color):
  y = int(y)
  color = int(color)
 
- if x < 0 or x >= W or y < 0 or y >= H:
+ if x < 0 or x >= SIZE.W or y < 0 or y >= SIZE.H:
   return
  if (COLOR.mask & (1 << color)) != 0:
   return
- index = (y * W + x) // 2
+ index = (y * SIZE.W + x) // 2
  is_hnibble = x % 2 == 0
  mem[index] = (
   (mem[index] & (0x0F if is_hnibble else 0xF0))
@@ -101,7 +104,7 @@ def pixel_set(x, y, color):
 def pixel(x, y, color=-1):
  x -= cam[0]
  y -= cam[1]
- if x < 0 or x >= W or y < 0 or y >= H:
+ if x < 0 or x >= SIZE.W or y < 0 or y >= SIZE.H:
   return -1
 
  old_color = pixel_get(x, y)
@@ -147,13 +150,13 @@ def rect(x, y, width, height, color, fill=False):
 
  x -= cam[0]
  y -= cam[1]
- if x >= W or y >= H or x + width <= 0 or y + height <= 0:
+ if x >= SIZE.W or y >= SIZE.H or x + width <= 0 or y + height <= 0:
   return
 
  x_start = int(max(0, x))
- x_end = int(min(W, x + width))
+ x_end = int(min(SIZE.W, x + width))
  y_start = int(max(0, y))
- y_end = int(min(H, y + height))
+ y_end = int(min(SIZE.H, y + height))
 
  if fill:
   for scan_y in range(y_start, y_end):
@@ -184,7 +187,7 @@ def text(x, y, string, color, background=0):
 
   # Wrapping
   if text_wrap:
-   if current_x >= W:
+   if current_x >= SIZE.W:
     if ch == " ": # Space
      continue
     current_x = x
@@ -195,7 +198,7 @@ def text(x, y, string, color, background=0):
 
 
 def character(x, y, ordinal, color, background=0):
- if x < -FONT.W or x >= W or y < -FONT.H or y >= H:
+ if x < -FONT.W or x >= SIZE.W or y < -FONT.H or y >= SIZE.H:
   return
 
  bits = FONT.CHAR.get(ordinal, 0)
@@ -204,7 +207,7 @@ def character(x, y, ordinal, color, background=0):
    on = (bits >> (py * FONT.W + px)) & 1
    tx = x + px
    ty = y + py
-   if tx < 0 or tx >= W or ty < 0 or ty >= H:
+   if tx < 0 or tx >= SIZE.W or ty < 0 or ty >= SIZE.H:
     continue
    pixel_set(tx, ty, color if on else background)
 
@@ -271,7 +274,7 @@ def blit(
   GLOBAL.PROCESS._sprite_,
   size, size,
   src_x, src_y, src_w, src_h,
-  W, (HBAR + HVIEW + HBAR),
+  SIZE.W, SIZE.HFULL,
   dest_x, dest_y, dest_w, dest_h,
   rotation=0
  )
@@ -280,18 +283,18 @@ def clear(color=0):
  mem[:] = bytes([((color & 0x0F) << 4) | (color & 0x0F)] * len(mem))
 
 def flip():
- pixels = bytearray(W * (HBAR + HVIEW + HBAR) * 4)
- for y in range(HBAR + HVIEW + HBAR):
-  for x in range(W):
-   memory_byte = buffer[(y * W + x) // 2]
+ pixels = bytearray(SIZE.W * SIZE.HFULL * 4)
+ for y in range(SIZE.HFULL):
+  for x in range(SIZE.W):
+   memory_byte = buffer[(y * SIZE.W + x) // 2]
    color_index = (memory_byte >> 4) if x % 2 == 0 else (memory_byte & 0x0F)
-   pixel_index = (y * W + x) * 4
+   pixel_index = (y * SIZE.W + x) * 4
    r, g, b = COLOR.PALETTE[color_index]
    pixels[pixel_index] = 255
    pixels[pixel_index + 1] = b
    pixels[pixel_index + 2] = g
    pixels[pixel_index + 3] = r
 
- sdl2.SDL_UpdateTexture(texture, None, bytes(pixels), W * 4)
+ sdl2.SDL_UpdateTexture(texture, None, bytes(pixels), SIZE.W * 4)
  sdl2.SDL_RenderCopy(renderer, texture, None, None)
  sdl2.SDL_RenderPresent(renderer)

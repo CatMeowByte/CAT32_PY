@@ -48,12 +48,12 @@ def update():
 
 def draw():
  cls()
- rect(0, 0, VIDEO.W, 8, COLOR.DARK_BLUE, 1)
+ rect(0, 0, VIDEO.SIZE.W, 8, COLOR.DARK_BLUE, 1)
  text(0, 0, path, COLOR.BLUE)
  for i, entry in enumerate(entries):
   is_dir = entry in ls_dir
   if i == select:
-   rect(0, 8 + i * 8, VIDEO.W, 8, COLOR.DARK_GRAY, 1)
+   rect(0, 8 + i * 8, VIDEO.SIZE.W, 8, COLOR.DARK_GRAY, 1)
    text(0, 8 + i * 8, entry, COLOR.YELLOW if is_dir else COLOR.WHITE)
   else:
    text(0, 8 + i * 8, entry, COLOR.PINK if is_dir else COLOR.GRAY)

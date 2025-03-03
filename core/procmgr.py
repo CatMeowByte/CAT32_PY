@@ -9,8 +9,6 @@ BANKS = (
 )
 LAUNCHER = "/app/file_explorer.app"
 
-o(cam() is VIDEO.camera())
-
 def exception_error(e, pid, at):
  error_type = type(e).__name__
  error_message = str(e)

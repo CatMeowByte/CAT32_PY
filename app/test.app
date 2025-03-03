@@ -9,14 +9,14 @@ def init():
 def update():
  global pos
  input()
- pos[0] = (pos[0] + dir[0]) % VIDEO.W
- pos[1] = (pos[1] + dir[1]) % VIDEO.H
+ pos[0] = (pos[0] + dir[0]) % VIDEO.SIZE.W
+ pos[1] = (pos[1] + dir[1]) % VIDEO.SIZE.H
 
 def draw():
  cls(COLOR.DARK_BLUE)
  line(0, 0, 120, 120, COLOR.WHITE)
  text(8, 16, "Hi, all!", COLOR.YELLOW)
- text(0, VIDEO.H - 8, str(BUTTON.state), COLOR.GRAY)
+ text(0, VIDEO.SIZE.H - 8, str(BUTTON.state), COLOR.GRAY)
  pix(pos[0], pos[1], COLOR.PINK)
 
 def input():
