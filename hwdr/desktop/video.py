@@ -5,7 +5,7 @@ COLOR = None
 FONT = None
 def depends(**kwargs): globals().update(kwargs)
 
-SCALE = 3
+SCALE = 2
 SIZE = Box(
  W = 120,
  H = 0,
