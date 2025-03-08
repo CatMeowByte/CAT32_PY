@@ -106,9 +106,10 @@ GLOBAL.PROCESS = None # Reference of current iterated process
 
 async def asyncio_tick():
  f = processes_fields.tick
+ r = processes_event_ref.tick
  while True:
   BUTTON._update_state()
-  for pid, upref in enumerate(processes_event_ref.tick):
+  for pid, upref in enumerate(r):
    if not upref: continue
    GLOBAL.PROCESS = processes[pid]
    try:
@@ -121,8 +122,9 @@ async def asyncio_tick():
 
 async def asyncio_draw():
  f = processes_fields.draw
+ r = processes_event_ref.draw
  while True:
-  for pid, upref in enumerate(processes_event_ref.draw):
+  for pid, upref in enumerate(r):
    if not upref: continue
    GLOBAL.PROCESS = processes[pid]
    mem(0)
@@ -137,10 +139,11 @@ async def asyncio_draw():
 
 def generate_asyncio_periodic(field):
  f = processes_fields[field]
+ r = processes_event_ref[field]
  async def periodic_event():
   pid = 0
   while True:
-   upref = processes_event_ref[field][pid]
+   upref = r[pid]
    if upref:
     GLOBAL.PROCESS = processes[pid]
     try:
