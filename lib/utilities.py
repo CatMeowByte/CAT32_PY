@@ -3,6 +3,7 @@
 # By CatMeowByte
 # SPDX-License-Identifier: WTFPL
 
+import binascii
 import random
 
 # Functions
@@ -12,8 +13,11 @@ def clamp(value, a, b):
 def remap(value, from_a, from_b, to_a, to_b):
  return to_a + (value - from_a) / (from_b - from_a) * (to_b - to_a)
 
-def rnd(value=1.0):
- return random.random() * value
+def rnd(low=0.0, high=1.0):
+ return random.uniform(low, high)
+
+def seed(key=None):
+ random.seed(binascii.crc32(str(key).encode("utf-8")) if key else None)
 
 def link(*parts):
  sep = "/"

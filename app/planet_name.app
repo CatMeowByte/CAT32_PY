@@ -20,7 +20,7 @@ def generate_name():
  planet_name = ""
  len_cost = 12
  word_count = 0
- max_words = int(rnd() * 3) + 1
+ max_words = int(rnd(1, 4))
 
  while not planet_name:
   while word_count < max_words and len_cost > 0:
@@ -53,25 +53,25 @@ def generate_normal_word(len_cost):
  cost = 0
 
  if rnd() < 0.3 and len_cost > 3:
-  prefix = PREFIXES[int(rnd() * len(PREFIXES))]
+  prefix = PREFIXES[int(rnd(0, len(PREFIXES)))]
   word += prefix
   cost += len(prefix)
 
- core_length = max(2, min(len_cost - cost, int(rnd() * 6) + 2))
+ core_length = max(2, min(len_cost - cost, int(rnd(2, 8))))
  use_vowel = False
  for i in range(core_length):
   if use_vowel:
-   word += VOWELS[int(rnd() * len(VOWELS))]
+   word += VOWELS[int(rnd(0, len(VOWELS)))]
   else:
    if rnd() < 0.3:
-    word += WEIGHTED_CONSONANTS[int(rnd() * len(WEIGHTED_CONSONANTS))]
+    word += WEIGHTED_CONSONANTS[int(rnd(0, len(WEIGHTED_CONSONANTS)))]
    else:
-    word += CONSONANTS[int(rnd() * len(CONSONANTS))]
+    word += CONSONANTS[int(rnd(0, len(CONSONANTS)))]
   use_vowel = not use_vowel
  cost += core_length
 
  if rnd() < 0.3 and len_cost - cost > 3:
-  suffix = SUFFIXES[int(rnd() * len(SUFFIXES))]
+  suffix = SUFFIXES[int(rnd(0, len(SUFFIXES)))]
   word += suffix
   cost += len(suffix)
 
@@ -79,45 +79,38 @@ def generate_normal_word(len_cost):
 
 def generate_codename_letter():
  word = ""
- core_length = max(2, int(rnd() * 3) + 2)
+ core_length = max(2, int(rnd(2, 5)))
  use_vowel = False
  for i in range(core_length):
   if use_vowel:
-   word += VOWELS[int(rnd() * len(VOWELS))]
+   word += VOWELS[int(rnd(0, len(VOWELS)))]
   else:
    if rnd() < 0.3:
-    word += WEIGHTED_CONSONANTS[int(rnd() * len(WEIGHTED_CONSONANTS))]
+    word += WEIGHTED_CONSONANTS[int(rnd(0, len(WEIGHTED_CONSONANTS)))]
    else:
-    word += CONSONANTS[int(rnd() * len(CONSONANTS))]
+    word += CONSONANTS[int(rnd(0, len(CONSONANTS)))]
   use_vowel = not use_vowel
  return {"word": word.upper(), "cost": core_length}
 
-# Generate MK + number
-def generate_codename_mk():
- word = "MK" + str(int(rnd() * 9) + 1)
- return {"word": word, "cost": 4}
-
 # Generate key and number (e.g., ZOR-43)
 def generate_codename_key():
- word = generate_codename_letter()["word"] + "-" + str(int(rnd() * 99) + 1)
+ word = generate_codename_letter()["word"] + "-" + str(int(rnd(1, 99 + 1)))
  return {"word": word, "cost": 6}
 
 # Generate letter + number (e.g., A328)
 def generate_codename_keynum():
- word = CONSONANTS[int(rnd() * len(CONSONANTS))].upper() + str(int(rnd() * 900) + 100)
+ word = CONSONANTS[int(rnd(0, len(CONSONANTS)))] .upper() + str(int(rnd(100, 999 + 1)))
  return {"word": word, "cost": 4}
 
 # Generate numbers (e.g., 1985)
 def generate_codename_order():
- word = str(int(rnd() * 9000) + 10)
+ word = str(int(rnd(10, 9999 + 1)))
  return {"word": word, "cost": 3}
 
 def generate_random_codename():
  rand = rnd()
  if rand < 0.2:
   return generate_codename_letter()
- elif rand < 0.4:
-  return generate_codename_mk()
  elif rand < 0.6:
   return generate_codename_key()
  elif rand < 0.8:

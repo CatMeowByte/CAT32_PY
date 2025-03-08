@@ -228,8 +228,8 @@ def blit_extended(
  flip_h = dest_w < 0
  flip_v = dest_h < 0
 
- dest_w = abs(dest_w)
- dest_h = abs(dest_h)
+ dest_w = int(abs(dest_w))
+ dest_h = int(abs(dest_h))
 
  scale_x = float(src_w) / float(dest_w)
  scale_y = float(src_h) / float(dest_h)
@@ -242,6 +242,7 @@ def blit_extended(
    if dest_x + x < 0 or dest_x + x >= dest_size_w:
     continue
 
+   rotation = int(rotation)
    if rotation == 0:
     sx = int(src_x + (src_w - 1 - x * scale_x) if flip_h else src_x + x * scale_x)
     sy = int(src_y + (src_h - 1 - y * scale_y) if flip_v else src_y + y * scale_y)
@@ -279,7 +280,7 @@ def blit(
   src_x, src_y, src_w, src_h,
   SIZE.W, SIZE.HFULL,
   dest_x, dest_y, dest_w, dest_h,
-  rotation=0
+  rotation
  )
 
 def clear(color=0):

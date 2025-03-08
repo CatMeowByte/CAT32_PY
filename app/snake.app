@@ -173,7 +173,7 @@ def is_food_in_snake_path(food_pos):
 
 def spawn_food():
  while len(food) < FOOD_COUNT:
-  new_food = [int(rnd(MAP_SIZE)), int(rnd(MAP_SIZE))]
+  new_food = [int(rnd(0, MAP_SIZE)), int(rnd(0, MAP_SIZE))]
   if new_food not in snake and new_food not in food:
    food.append(new_food)
 

@@ -4,7 +4,7 @@ import sys
 # TODO: overwrite all __dict__ usage since it might not work
 
 from lib.boxdict import Box
-from lib.utilities import clamp, remap, rnd, link
+from lib.utilities import clamp, remap, rnd, seed, link
 
 GLOBAL = Box() # Packed variables
 STATIC = Box() # Unpacked functions and classes
@@ -35,7 +35,7 @@ def bind(path):
 
 make_static(
  Box = Box,
- clamp = clamp, remap = remap, rnd = rnd, link = link,
+ clamp = clamp, remap = remap, rnd = rnd, seed = seed, link = link,
  o = o,
  make_static = make_static,
  bind = bind,
