@@ -24,7 +24,7 @@ def exception_error(e, pid, at):
 
 # Process
 processes_fields = Box(
- tick=Box(label="UPDATE", interval=1/GLOBAL.TICK),
+ tick=Box(label="TICK", interval=1/GLOBAL.TICK),
  draw=Box(label="DRAW", interval=1/GLOBAL.TICK),
  period_q=Box(label="PERIOD QUARTER SECOND", interval=1/4),
  period_h=Box(label="PERIOD HALF SECOND", interval=1/2),
@@ -67,8 +67,7 @@ def run(path, pid=0):
  processes[pid] = obj
 
  for field in processes_fields:
-  attr = "update" if field == "tick" else field # Exception
-  processes_event_ref[field][pid] = getattr(processes[pid], attr, None)
+  processes_event_ref[field][pid] = getattr(processes[pid], field, None)
 
  # Init
  try:

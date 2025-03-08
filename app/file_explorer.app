@@ -20,7 +20,7 @@ def path_back(path):
  last_slash = path.rfind("/")
  return path[:last_slash] if last_slash > 0 else "/"
 
-def update():
+def tick():
  global select, path
  sp = select
  select += int(btnr(BUTTON.DOWN)) - int(btnr(BUTTON.UP))

@@ -6,7 +6,7 @@ dir = [1 , 0]
 def init():
  print("INIT!!")
 
-def update():
+def tick():
  global pos
  input()
  pos[0] = (pos[0] + dir[0]) % VIDEO.SIZE.W

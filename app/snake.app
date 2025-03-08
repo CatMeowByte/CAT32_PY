@@ -18,13 +18,13 @@ highlight_food = True
 def init():
  restart()
 
-def update():
+def tick():
  global f, boost
  if state == "menu" or state == "options":
   menu_input()
  else:
   if f % (2 - boost) == 0:
-   tick()
+   game_update()
   f = (f + 1) % (2 - boost)
 
 def menu_input():
@@ -70,7 +70,7 @@ def menu_input():
 #  if sound_enabled:
 #   SND.play_tone(freq, duration)
 
-def tick():
+def game_update():
  global snake, food
  head = [snake[0][0] + dir[0], snake[0][1] + dir[1]]
  snake.insert(0, head)

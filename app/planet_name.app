@@ -125,7 +125,7 @@ def generate_random_codename():
  else:
   return generate_codename_order()
 
-def update():
+def tick():
  global current_planet_name
  if btnr(BUTTON.ACCEPT):
   current_planet_name = generate_name()
